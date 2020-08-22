@@ -1,0 +1,140 @@
+<html>
+    <head>
+        <title>Sketchfab Preview Generator</title>
+    </head>
+    <body>
+        <div>
+            <h1>Upload your images somewhere.</h1>
+        </div>
+        <div class="settings">
+            <h1>Set your links.</h1>
+            <div>
+                <form id="modelSelection">
+                    <label for="modelId">Model ID</label>
+                    <input oninput="updateSketchfabWindow(true);" onClick="this.select();" name="modelId" id="modelId" type="text" list="demoModels" data-list-filter="^" />
+                        <datalist id="demoModels">
+                            <option value="22b5067384334926b6df0d3ba2dba229">Cylinder (Bright Sunlight)</option>
+                            <option value="9e83d6d4d3d74989a085bb62ff1b0155">Plane (Bright Sunlight)</option>
+                        </datalist>
+                    <label for="materialName">Material Name</label>
+                    <input type="text" oninput="updateSketchfabWindow(false);" name="materialName" id="materialName" value="main_material">
+                </form>
+                <hr>
+                <form id="materialMaps" name="materialMaps" oninput="updateSketchfabWindow(true);">
+                    <label for='workflow'>Select Workflow</label>
+                    <select id='workflow' name='workflow' onchange="updateSelectedWorkflow(this.value);">
+                        <option name='workflowMetalness' >Metalness</option>
+                        <option name='workflowSpecular' >Specular</option>
+                    </select><br>
+                    <label for='emissive'>Emissive</label><input onClick="this.select();" type='url' name='emissive' id='emissive'><br>
+                    <label for='transparency'>Transparency</label><input onClick="this.select();" type='url' name='transparency' id='transparency'><br>
+                    <label for='normal'>Normal</label><input onClick="this.select();" type='url' name='normal' id='normal'><br>
+                    <label for='ao'>AO</label><input onClick="this.select();" type='url' name='ao' id='ao'><br>
+                    <label for='cavity'>Cavity</label><input onClick="this.select();" type='url' name='cavity' id='normal'><br>
+                    <label for='diffuse'>Diffuse</label><input onClick="this.select();" value="" type='url' name='diffuse' id='diffuse'><br>
+                    <label for='metalness'>Metalness</label><input onClick="this.select();" type='url' name='metalness' id='metalness'><br>
+                    <label for='specular'>Specular</label><input onClick="this.select();" type='url' name='specular' id='specular'><br>
+                    <label for='roughness'>Roughness</label><input onClick="this.select();" type='url' name='roughness' id='roughness'><br>
+                    <label for='glossiness'>Glossiness</label><input onClick="this.select();" type='url' name='glossiness' id='glossiness'><br>
+                </form>
+                <hr>
+                <form id="modelSettings" name="modelSettings" oninput="updateSketchfabWindow(false);">
+                    
+                    <label for="autostart">Autostart</label>
+                    <input checked type="checkbox" name="autostart" id="autostart">
+
+                    <label for="autospin">Autospin Speed</label>
+                    <input type="number" value="0.1" step="0.025" name="autospin" id="autospin">
+
+                    <label for="camera">Intro Animation</label>
+                    <input type="checkbox" name="camera" id="camera">
+                </form>
+                <hr>
+                <form id="advancedSettings" name="advancedSettings" >
+
+                    <label for="randomHttpParameter">Evade caching</label>
+                    <input type="checkbox" oninput="updateSketchfabWindow(false);" name="randomHttpParameter" id="randomHttpParameter">
+                    
+                    <button type="button" onclick="document.getElementById('materialMaps').reset();updateSketchfabWindow(true);">Clear all Maps</button>
+                </form>
+            </div>
+        </div>
+        <div>
+            <h1>Adjust your settings.</h1>
+            <div>
+                <span id="sketchfabContainer"></span>
+            </div>
+        </div>
+        <div>
+            <h1>Share.</h1>
+            <div>
+                <textarea readonly id="sketchfabUrl" rows="4" cols="100" ></textarea>
+            </div>
+        </div>
+        <div>
+            <h1>FAQ</h1>
+            <div>
+                <p><b>Why does the entire Iframe refresh every time the material is changed? Can't sketchfab update the material on the fly?</b><br>
+                Yes, Sketchfab could theoretically perform the material changes without reloading the iframe. But this only works well if the selection of maps and the workflow (Specular/Metalness) are always the same which may not be the case in this scenario.</p>
+                <p><b>Why is Sketchfab not using the Specular workflow even though I selected it in the dropdown?</b><br>Sketchfab only uses the Specular workflow if a specularity map is actually available. If you leave the 'Specular' field empty it will still default to the metalness workflow.</p>
+            </div>
+        </div>
+
+        <script>
+            //Default Settings
+            var modelId = "";
+            var viewerParameters = [];
+
+            updateSelectedWorkflow("Metalness");
+            updateSketchfabWindow(true);
+            function updateSketchfabWindow(forceHardRefresh) {
+                //Update Model ID
+                modelId = document.getElementById('modelId').value;
+                if(modelId == ""){
+                    document.getElementById("sketchfabContainer").innerHTML = "Enter a valid sketchfab model ID to get started."
+                    return;
+                }
+
+                //update viewerParameters
+                viewerParameters['autostart'] = (document.getElementById("autostart").checked ? 1 : 0 );
+                viewerParameters['autospin'] = document.getElementById("autospin").value;
+                viewerParameters['camera'] = (document.getElementById("camera").checked ? 1 : 0 );
+
+                //Generate URL
+                var viewerParameterString = "";
+                Object.keys(viewerParameters).forEach(key => {
+                    viewerParameterString += key + "=" + viewerParameters[key]+"&";
+                });
+                var iframeUrl = "https://sketchfab.com/models/" + modelId + "/embed?"+viewerParameterString+"#";
+                var elements = document.getElementById('materialMaps').elements;
+                for (var i = 0, element; element = elements[i++];) {
+                    if(element.type == "url" && element.disabled == false){
+                        if (element.value != ""){
+                            iframeUrl += "material_"+element.name+"="+element.value+(document.getElementById("randomHttpParameter").checked ? "?"+Math.floor(Math.random() * 100000) : '')+",";
+                        }
+                    }
+                }
+                iframeUrl += "material_showcase=1,material_names="+document.getElementById('materialName').value;
+                if(forceHardRefresh){
+                    document.getElementById("sketchfabContainer").innerHTML='<iframe id="sketchfabWindow" height="400px" width="800px"></iframe>'
+                }
+                document.getElementById("sketchfabWindow").src=iframeUrl;
+                document.getElementById("sketchfabUrl").value=iframeUrl;
+            }
+            function updateSelectedWorkflow(workflow){
+                if(workflow == "Metalness"){
+                    document.getElementById("specular").value="";
+                    document.getElementById("specular").disabled = true;
+                    document.getElementById("metalness").disabled = false;
+                    updateSketchfabWindow(true);
+                }
+                if(workflow == "Specular"){
+                    document.getElementById("metalness").value="";
+                    document.getElementById("metalness").disabled = true;
+                    document.getElementById("specular").disabled = false;
+                    updateSketchfabWindow(true);
+                }
+            }
+        </script>
+</body>
+</html>
